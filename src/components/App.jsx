@@ -1,4 +1,4 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import ImageGallery from './ImageGallery/ImageGallery';
 import Modal from './Modal/Modal';
 import Searchbar from './Searchbar/Searchbar';
@@ -8,92 +8,83 @@ import { getPost } from '../service/post';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-export class App extends React.Component {
-  state = {
-    images: [],
-    showModal: false,
-    searchName: '',
-    page: 1,
-    totalHits: 0,
-    isLoading: false,
-    isError: false,
-    bigImage: '',
-  };
+export const App = () => {
+  const [images, setImages] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [searchName, setSearchName] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalHits, setTotalHits] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [bigImage, setBigImage] = useState('');
 
-  async componentDidUpdate(_, prevState) {
-    const { page, searchName } = this.state;
-
-    if (prevState.searchName !== searchName || prevState.page !== page) {
-      this.setState({ isLoading: true });
+  useEffect(() => {
+    if (searchName === '') {
+      return;
+    }
+    setIsLoading(true);
+    const makeRequest = async () => {
       try {
         const images = await getPost(page, searchName);
         if (images.hits.length === 0) {
           toast.error(`Nothing found for request: ${searchName}`);
           return;
         }
-        this.setState(prev => ({
-          images: page > 1 ? [...prev.images, ...images.hits] : images.hits,
-          page,
-          totalHits: images.total,
-        }));
+        setImages(prev => [...prev, ...images.hits]);
+        setPage(page);
+        setTotalHits(images.total);
       } catch (error) {
-        this.setState({ isError: true });
-        console.log(error.message);
+        setIsError(true);
+        console.log(error);
       } finally {
-        this.setState({ isLoading: false });
+        setIsLoading(false);
       }
-    }
-  }
+    };
+    makeRequest();
+  }, [page, searchName]);
 
-  handleSubmitForm = searchName => {
-    this.setState({ page: 1, searchName });
+  const handleSubmitForm = searchName => {
+    setPage(1);
+    setSearchName(searchName);
+    setImages([]);
   };
 
-  handleChangePage = () => {
-    this.setState(prev => ({ page: prev.page + 1 }));
+  const handleChangePage = () => {
+    setPage(prev => prev + 1);
   };
 
-  toggleModal = () => {
-    this.setState(state => ({
-      showModal: !state.showModal,
-    }));
+  const toggleModal = () => {
+    setShowModal(!showModal);
   };
 
-  openModal = event => {
+  const openModal = event => {
     const bigImage = event.target.dataset.image;
     if (event.target.nodeName === 'IMG') {
-      this.setState(state => ({
-        showModal: !state.showModal,
-        bigImage,
-      }));
+      setShowModal(!showModal);
+      setBigImage(bigImage);
     }
   };
 
-  render() {
-    const { showModal, images, bigImage, isLoading, isError } = this.state;
-    const itemsPerPage = 12;
+  const itemsPerPage = 12;
 
-    if (isError) {
-      return <p>Something went wrong...</p>;
-    }
-
-    return (
-      <div>
-        <Searchbar onSubmit={this.handleSubmitForm} />
-
-        {images.length > 0 ? (
-          <ImageGallery images={images} openModal={this.openModal} />
-        ) : null}
-
-        {isLoading && <Loader />}
-
-        {showModal && (
-          <Modal onClose={this.toggleModal} bigImage={bigImage}></Modal>
-        )}
-        {images.length > 0 && this.state.totalHits > itemsPerPage && (
-          <Button onClick={this.handleChangePage} />
-        )}
-      </div>
-    );
+  if (isError) {
+    return <p>Something went wrong...</p>;
   }
-}
+
+  return (
+    <div>
+      <Searchbar onSubmit={handleSubmitForm} />
+
+      {images.length > 0 ? (
+        <ImageGallery images={images} openModal={openModal} />
+      ) : null}
+
+      {isLoading && <Loader />}
+
+      {showModal && <Modal onClose={toggleModal} bigImage={bigImage}></Modal>}
+      {images.length > 0 && totalHits > itemsPerPage && (
+        <Button onClick={handleChangePage} />
+      )}
+    </div>
+  );
+};
