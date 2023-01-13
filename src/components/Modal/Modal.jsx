@@ -8,10 +8,9 @@ const modalRoot = document.querySelector('#modal-root');
 export const Modal = ({ onClose, bigImage }) => {
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
-  });
-
-  useEffect(() => {
-    window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   });
 
   const handleKeyDown = event => {
